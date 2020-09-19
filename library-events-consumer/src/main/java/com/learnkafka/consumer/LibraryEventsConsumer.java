@@ -8,18 +8,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
-@Component
 @Slf4j
+@Component
 public class LibraryEventsConsumer {
 
-    @Autowired
-    private LibraryEventsService libraryEventsService;
+	@Autowired
+	private LibraryEventsService libraryEventsService;
 
-    @KafkaListener(topics = {"library-events"})
-    public void onMessage(ConsumerRecord<Integer,String> consumerRecord) throws JsonProcessingException {
+	@KafkaListener(topics = { "library-events" })
+	public void onMessage(ConsumerRecord<Integer, String> consumerRecord) throws JsonProcessingException {
 
-        log.info("ConsumerRecord : {} ", consumerRecord );
-        libraryEventsService.processLibraryEvent(consumerRecord);
+		log.info("ConsumerRecord : {} ", consumerRecord);
+		libraryEventsService.processLibraryEvent(consumerRecord);
 
-    }
+	}
 }

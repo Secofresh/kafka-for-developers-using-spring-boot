@@ -20,85 +20,88 @@ import java.util.Optional;
 @Slf4j
 public class LibraryEventsService {
 
-    @Autowired
-    ObjectMapper objectMapper;
+	@Autowired
+	ObjectMapper objectMapper;
 
-    @Autowired
-    KafkaTemplate<Integer,String> kafkaTemplate;
+	@Autowired
+	KafkaTemplate<Integer, String> kafkaTemplate;
 
-    @Autowired
-    private LibraryEventsRepository libraryEventsRepository;
+	@Autowired
+	private LibraryEventsRepository libraryEventsRepository;
 
-    public void processLibraryEvent(ConsumerRecord<Integer,String> consumerRecord) throws JsonProcessingException {
-        LibraryEvent libraryEvent = objectMapper.readValue(consumerRecord.value(), LibraryEvent.class);
-        log.info("libraryEvent : {} ", libraryEvent);
+	public void processLibraryEvent(ConsumerRecord<Integer, String> consumerRecord) throws JsonProcessingException {
 
-        if(libraryEvent.getLibraryEventId()!=null && libraryEvent.getLibraryEventId()==000){
-            throw new RecoverableDataAccessException("Temporary Network Issue");
-        }
+		LibraryEvent libraryEvent = objectMapper.readValue(consumerRecord.value(), LibraryEvent.class);
 
-        switch(libraryEvent.getLibraryEventType()){
-            case NEW:
-                save(libraryEvent);
-                break;
-            case UPDATE:
-                //validate the libraryevent
-                validate(libraryEvent);
-                save(libraryEvent);
-                break;
-            default:
-                log.info("Invalid Library Event Type");
-        }
+		log.info("libraryEvent : {} ", libraryEvent);
 
-    }
+		if (libraryEvent.getLibraryEventId() != null && libraryEvent.getLibraryEventId() == 000) {
+			throw new RecoverableDataAccessException("Temporary Network Issue");
+		}
 
-    private void validate(LibraryEvent libraryEvent) {
-        if(libraryEvent.getLibraryEventId()==null){
-            throw new IllegalArgumentException("Library Event Id is missing");
-        }
+		switch (libraryEvent.getLibraryEventType()) {
+		case NEW:
+			save(libraryEvent);
+			break;
+		case UPDATE:
+			// validate the libraryevent
+			validate(libraryEvent);
+			save(libraryEvent);
+			break;
+		default:
+			log.info("Invalid Library Event Type");
+		}
+	}
 
-        Optional<LibraryEvent> libraryEventOptional = libraryEventsRepository.findById(libraryEvent.getLibraryEventId());
-        if(!libraryEventOptional.isPresent()){
-            throw new IllegalArgumentException("Not a valid library Event");
-        }
-        log.info("Validation is successful for the library Event : {} ", libraryEventOptional.get());
-    }
+	private void validate(LibraryEvent libraryEvent) {
+		if (libraryEvent.getLibraryEventId() == null) {
+			throw new IllegalArgumentException("Library Event Id is missing");
+		}
 
-    private void save(LibraryEvent libraryEvent) {
-        libraryEvent.getBook().setLibraryEvent(libraryEvent);
-        libraryEventsRepository.save(libraryEvent);
-        log.info("Successfully Persisted the libary Event {} ", libraryEvent);
-    }
+		Optional<LibraryEvent> libraryEventOptional = libraryEventsRepository.findById(libraryEvent.getLibraryEventId());
+		
+		if (!libraryEventOptional.isPresent()) {
+			throw new IllegalArgumentException("Not a valid library Event");
+		}
+		log.info("Validation is successful for the library Event : {} ", libraryEventOptional.get());
+	}
 
-    public void handleRecovery(ConsumerRecord<Integer,String> record){
+	private void save(LibraryEvent libraryEvent) {
+		libraryEvent.getBook().setLibraryEvent(libraryEvent);
+		libraryEventsRepository.save(libraryEvent);
+		log.info("Successfully Persisted the libary Event {} ", libraryEvent);
+	}
 
-        Integer key = record.key();
-        String message = record.value();
+	public void handleRecovery(ConsumerRecord<Integer, String> record) {
 
-        ListenableFuture<SendResult<Integer,String>> listenableFuture = kafkaTemplate.sendDefault(key, message);
-        listenableFuture.addCallback(new ListenableFutureCallback<SendResult<Integer, String>>() {
-            @Override
-            public void onFailure(Throwable ex) {
-                handleFailure(key, message, ex);
-            }
+		Integer key = record.key();
+		String message = record.value();
 
-            @Override
-            public void onSuccess(SendResult<Integer, String> result) {
-                handleSuccess(key, message, result);
-            }
-        });
-    }
+		ListenableFuture<SendResult<Integer, String>> listenableFuture = kafkaTemplate.sendDefault(key, message);
+		listenableFuture.addCallback(new ListenableFutureCallback<SendResult<Integer, String>>() {
+			@Override
+			public void onFailure(Throwable ex) {
+				handleFailure(key, message, ex);
+			}
 
-    private void handleFailure(Integer key, String value, Throwable ex) {
-        log.error("Error Sending the Message and the exception is {}", ex.getMessage());
-        try {
-            throw ex;
-        } catch (Throwable throwable) {
-            log.error("Error in OnFailure: {}", throwable.getMessage());
-        }
-    }
+			@Override
+			public void onSuccess(SendResult<Integer, String> result) {
+				handleSuccess(key, message, result);
+			}
+		});
+	}
 
-    private void handleSuccess(Integer key, String value, SendResult<Integer, String> result) {
-        log.info("Message Sent SuccessFully for the key : {} and the value is {} , partition is {}", key, value, result.getRecordMetadata().partition());
-    }
+	private void handleFailure(Integer key, String value, Throwable ex) {
+		log.error("Error Sending the Message and the exception is {}", ex.getMessage());
+		try {
+			throw ex;
+		} catch (Throwable throwable) {
+			log.error("Error in OnFailure: {}", throwable.getMessage());
+		}
+	}
+
+	private void handleSuccess(Integer key, String value, SendResult<Integer, String> result) {
+		log.info("Message Sent SuccessFully for the key : {} and the value is {} , partition is {}", key, value,
+				result.getRecordMetadata().partition());
+	}
 }

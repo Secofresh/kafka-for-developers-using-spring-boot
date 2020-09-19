@@ -57,7 +57,7 @@ public class LibraryEventProducerUnitTest {
         when(kafkaTemplate.send(isA(ProducerRecord.class))).thenReturn(future);
         //when
 
-        assertThrows(Exception.class, ()->eventProducer.sendLibraryEvent_Approach2(libraryEvent).get());
+        assertThrows(Exception.class, ()->eventProducer.sendLibraryEventApproach2(libraryEvent).get());
 
     }
 
@@ -86,7 +86,7 @@ public class LibraryEventProducerUnitTest {
         when(kafkaTemplate.send(isA(ProducerRecord.class))).thenReturn(future);
         //when
 
-        ListenableFuture<SendResult<Integer,String>> listenableFuture =  eventProducer.sendLibraryEvent_Approach2(libraryEvent);
+        ListenableFuture<SendResult<Integer,String>> listenableFuture =  eventProducer.sendLibraryEventApproach2(libraryEvent);
 
         //then
         SendResult<Integer,String> sendResult1 = listenableFuture.get();

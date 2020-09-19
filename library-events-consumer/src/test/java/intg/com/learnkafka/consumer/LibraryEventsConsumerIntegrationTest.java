@@ -23,13 +23,11 @@ import org.springframework.kafka.test.utils.ContainerTestUtils;
 import org.springframework.test.context.TestPropertySource;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -63,7 +61,6 @@ public class LibraryEventsConsumerIntegrationTest {
 
     @BeforeEach
     void setUp() {
-
         for (MessageListenerContainer messageListenerContainer : endpointRegistry.getListenerContainers()){
             ContainerTestUtils.waitForAssignment(messageListenerContainer, embeddedKafkaBroker.getPartitionsPerTopic());
         }
@@ -89,9 +86,9 @@ public class LibraryEventsConsumerIntegrationTest {
         verify(libraryEventsServiceSpy, times(1)).processLibraryEvent(isA(ConsumerRecord.class));
 
         List<LibraryEvent> libraryEventList = (List<LibraryEvent>) libraryEventsRepository.findAll();
-        assert libraryEventList.size() ==1;
+        assert libraryEventList.size() == 1;
         libraryEventList.forEach(libraryEvent -> {
-            assert libraryEvent.getLibraryEventId()!=null;
+            assert libraryEvent.getLibraryEventId() != null;
             assertEquals(456, libraryEvent.getBook().getBookId());
         });
 
@@ -106,8 +103,11 @@ public class LibraryEventsConsumerIntegrationTest {
         libraryEventsRepository.save(libraryEvent);
         //publish the update LibraryEvent
 
-        Book updatedBook = Book.builder().
-                bookId(456).bookName("Kafka Using Spring Boot 2.x").bookAuthor("Dilip").build();
+        Book updatedBook = Book.builder()
+        		.bookId(456)
+                .bookName("Kafka Using Spring Boot 2.x")
+                .bookAuthor("Dilip")
+                .build();
         libraryEvent.setLibraryEventType(LibraryEventType.UPDATE);
         libraryEvent.setBook(updatedBook);
         String updatedJson = objectMapper.writeValueAsString(libraryEvent);
