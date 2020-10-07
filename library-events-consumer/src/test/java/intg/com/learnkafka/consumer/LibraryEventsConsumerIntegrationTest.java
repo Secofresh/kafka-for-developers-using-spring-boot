@@ -23,11 +23,13 @@ import org.springframework.kafka.test.utils.ContainerTestUtils;
 import org.springframework.test.context.TestPropertySource;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.*;
 
@@ -100,16 +102,19 @@ public class LibraryEventsConsumerIntegrationTest {
         LibraryEvent libraryEvent = objectMapper.readValue(json, LibraryEvent.class);
         libraryEvent.getBook().setLibraryEvent(libraryEvent);
         libraryEventsRepository.save(libraryEvent);
+        
         //publish the update LibraryEvent
-
         Book updatedBook = Book.builder()
         		.bookId(456)
                 .bookName("Kafka Using Spring Boot 2.x")
                 .bookAuthor("Dilip")
                 .build();
+        
         libraryEvent.setLibraryEventType(LibraryEventType.UPDATE);
         libraryEvent.setBook(updatedBook);
+        
         String updatedJson = objectMapper.writeValueAsString(libraryEvent);
+        
         kafkaTemplate.sendDefault(libraryEvent.getLibraryEventId(), updatedJson).get();
 
         //when
@@ -128,12 +133,13 @@ public class LibraryEventsConsumerIntegrationTest {
         //given
         Integer libraryEventId = 123;
         String json = "{\"libraryEventId\":" + libraryEventId + ",\"libraryEventType\":\"UPDATE\",\"book\":{\"bookId\":456,\"bookName\":\"Kafka Using Spring Boot\",\"bookAuthor\":\"Dilip\"}}";
+        
         System.out.println(json);
+        
         kafkaTemplate.sendDefault(libraryEventId, json).get();
         //when
         CountDownLatch latch = new CountDownLatch(1);
         latch.await(3, TimeUnit.SECONDS);
-
 
         verify(libraryEventsConsumerSpy, atLeast(1)).onMessage(isA(ConsumerRecord.class));
         verify(libraryEventsServiceSpy, atLeast(1)).processLibraryEvent(isA(ConsumerRecord.class));
@@ -147,11 +153,12 @@ public class LibraryEventsConsumerIntegrationTest {
         //given
         Integer libraryEventId = null;
         String json = "{\"libraryEventId\":" + libraryEventId + ",\"libraryEventType\":\"UPDATE\",\"book\":{\"bookId\":456,\"bookName\":\"Kafka Using Spring Boot\",\"bookAuthor\":\"Dilip\"}}";
+        
         kafkaTemplate.sendDefault(libraryEventId, json).get();
+        
         //when
         CountDownLatch latch = new CountDownLatch(1);
         latch.await(3, TimeUnit.SECONDS);
-
 
         verify(libraryEventsConsumerSpy, atLeast(1)).onMessage(isA(ConsumerRecord.class));
         verify(libraryEventsServiceSpy, atLeast(1)).processLibraryEvent(isA(ConsumerRecord.class));
